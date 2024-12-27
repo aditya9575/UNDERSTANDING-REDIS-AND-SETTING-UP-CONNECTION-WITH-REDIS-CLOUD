@@ -1,0 +1,84 @@
+all data in redis is stored in key value pair format 
+- redis runs inside your memory so you need to keep a constant store in ur database else you'll lose all the data when reloaded 
+- its used for caching data that needs frequent loads and then using the cache to display the data as needed without waiting for a 
+continuous reload 
+- redis is build on top of the traditional database and we store the data in both redis and the db so we process from and where needed 
+
+running redis on windows we use wsl as redis is primarily made for linux 
+steps -> 
+1)wsl --install
+2)From the Microsoft Store, install Ubuntu
+
+3)Install Redis:
+In the Linux terminal (e.g., Ubuntu)->
+sudo apt update
+sudo apt install redis
+
+4) redis cloud password -> oIuDBAzN636Mpx54Dxz2svQtc5gSYhwb
+redis cloud public end point -> redis-14362.c305.ap-south-1-1.ec2.redns.redis-cloud.com:14362
+
+redis-cli -h <redis-14362.c305.ap-south-1-1.ec2.redns.redis-cloud.com:14362> -p <Redis_Port> -a <oIuDBAzN636Mpx54Dxz2svQtc5gSYhwb>
+
+----------------------------
+redis cloud connection with node -> 
+1)in node app -> npm i redis axios 
+
+2)in your express app we require axios and redis 
+
+3)now create a new redis client and connect to our local redis instance 
+ const redisClient = redis.createClient({
+    password: process.env.REDIS_PASSWORD,//here put your redis password
+    socket:{
+       host: "redis-14362.c305.ap-south-1-1.ec2.redns.redis-cloud.com",
+       port: 14362
+    }
+ });
+(Here this host address we copied from redis cloud's public endpoint after creating a database) 
+
+4)//now we run the connect function on our redis client and if your see the log it means you are connected to redis  
+try {
+    redisClient.connect(
+        console.log('Connected to Redis')
+    )
+} catch (error) {
+    console.log(error)
+}
+
+5)now we make use of redis -> 
+inside our api call we make use of isReady function on our redis client
+
+1stly -> Check Redis Client Readiness:
+
+Use the redisClient.isReady property to confirm if the Redis client is connected and ready to make requests.
+This ensures the Redis client can interact with the database.
+
+2ndly -> Fetch Data from Redis (Cache):
+
+Use the redisClient.get(key) method to fetch the cached data from Redis using a predefined key ("products" in this case).
+The data in Redis is stored as a string, so it needs to be parsed into JSON format using JSON.parse().
+
+3rd -> Check Cache Hit:
+
+If the data is found in Redis (i.e., the products variable is not null or undefined):
+Log "Cache hit!" to indicate that data was served from Redis.
+Return the cached data to the client using res.send()
+
+4th -> Handle Cache Miss:
+
+If no data is found in Redis:
+Log "Cache miss!" to indicate the absence of data in the cache.
+Fetch the data from the primary source (in this example, the dummyjson.com/products API) using axios.get().
+
+5th -> Store Data in Redis:
+
+After fetching the data from the primary source:
+Use redisClient.setEx(key, expiration, value) to store the data in Redis:
+Key: A unique identifier for the data ("products").
+Expiration: The time in seconds before the cached data expires (e.g., 10 seconds).
+Value: The stringified version of the data (use JSON.stringify()).
+
+6th -> Return Data to Client:
+
+Send the fetched data (either from Redis or the primary source) back to the client using res.send().
+
+
